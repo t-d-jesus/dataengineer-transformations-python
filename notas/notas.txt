@@ -1,0 +1,7 @@
+
+poetry run spark-submit \
+    --master local \
+    --py-files dist/data_transformations-*.whl \
+    jobs/citibike_ingest.py \
+    ./resources/citibike/citibike.csv \
+    ./data_lake/output/

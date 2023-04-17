@@ -23,7 +23,7 @@ BASE_COLUMNS = [
     "bikeid",
     "usertype",
     "birth_year",
-    "gender",
+    "gender"
 ]
 
 SAMPLE_DATA = [
@@ -86,32 +86,49 @@ def test_should_maintain_all_data_it_reads() -> None:
     given_dataframe = SPARK.read.parquet(given_ingest_folder)
     distance_transformer.run(SPARK, given_ingest_folder, given_transform_folder)
 
-    actual_dataframe = SPARK.read.parquet(given_transform_folder)
+
+
+    actual_dataframe = SPARK.read.parquet(given_transform_folder).drop('distance')
     actual_columns = set(actual_dataframe.columns)
     actual_schema = set(actual_dataframe.schema)
     expected_columns = set(given_dataframe.columns)
     expected_schema = set(given_dataframe.schema)
 
+    print(f'expected_schema = {expected_schema}')
+    print(f'actual_schema = {actual_schema}')
+
+    given_dataframe.show()
+    actual_dataframe.show()
+
     assert expected_columns == actual_columns
     assert expected_schema.issubset(actual_schema)
 
 
-@pytest.mark.skip
 def test_should_add_distance_column_with_calculated_distance() -> None:
     given_ingest_folder, given_transform_folder = __create_ingest_and_transform_folders()
     distance_transformer.run(SPARK, given_ingest_folder, given_transform_folder)
 
     actual_dataframe = SPARK.read.parquet(given_transform_folder)
+        # .orderBy('starttime', ascending=True)
     expected_dataframe = SPARK.createDataFrame(
         [
             SAMPLE_DATA[0] + [1.07],
-            SAMPLE_DATA[1] + [0.92],
             SAMPLE_DATA[2] + [1.99],
+            SAMPLE_DATA[1] + [0.92],
         ],
         BASE_COLUMNS + ['distance']
     )
     expected_distance_schema = StructField('distance', DoubleType(), nullable=True)
     actual_distance_schema = actual_dataframe.schema['distance']
+
+    print(f'expected_distance_schema {expected_distance_schema}')
+    print(f'actual_distance_schema {actual_distance_schema}')
+
+
+    print(f'-=--=--=-=DATAFRAMES-=--=--=-=')
+    actual_dataframe.show()
+    expected_dataframe.show()
+
 
     assert expected_distance_schema == actual_distance_schema
     assert expected_dataframe.collect() == actual_dataframe.collect()
@@ -124,3 +141,18 @@ def __create_ingest_and_transform_folders() -> Tuple[str, str]:
     ingest_dataframe = SPARK.createDataFrame(SAMPLE_DATA, BASE_COLUMNS)
     ingest_dataframe.write.parquet(ingest_folder, mode='overwrite')
     return ingest_folder, transform_folder
+
+
+
+
+
+#
+# [
+#     {"PartNumber":"872-AA","ProductName":"Lawnmower","Quantity":1,"USPrice":148.95,"Comment":"Confirm this is electric"},
+#     {"PartNumber":"926-AA","ProductName":"Baby Monitor","Quantity":2,"USPrice":39.98,"ShipDate":"1999-05-21"}
+# ]
+#     {"PartNumber":"456-NM","ProductName":"Power Supply","Quantity":1,"USPrice":45.99}
+# [
+#     {"PartNumber":"898-AZ","ProductName":"Computer Keyboard","Quantity":1,"USPrice":29.99},
+#     {"PartNumber":"898-AM","ProductName":"Wireless Mouse","Quantity":1,"USPrice":14.99}
+# ]
